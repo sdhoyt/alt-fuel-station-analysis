@@ -1,0 +1,284 @@
+---
+title: 'Tidy Tuesday: Alternative Fuel Stations'
+author: "Sean Hoyt"
+date: '2022-03-12'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+The dataset used for this analysis contains information on [alternative fuel stations](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-03-01/readme.md) from the [R for Data Science's Tidy Tuesday Github page](https://github.com/rfordatascience/tidytuesday). The original source of the data is the [US Department of Energy](https://afdc.energy.gov/data_download/alt_fuel_stations_format). The goal for this analysis is to look which alternative fuel stations are most prominent, how they're distributed accross the US, and what relationships exist between state populations and the number of stations in each state.
+
+# Data Wrangling
+
+## Data and Tool Setup
+
+### Alternative Fuel Station Data
+
+The main features from the [alternative fuel stations data](https://afdc.energy.gov/data_download/alt_fuel_stations_format) that this analysis will focus on are the following:
+
++--------------+------------------------------------------------------------------------------------------------------------+
+| Name         | Description                                                                                                |
++==============+============================================================================================================+
+| State        | The two character code for the U.S. state or Canadian province/territory of the station's location         |
++--------------+------------------------------------------------------------------------------------------------------------+
+| City         | The city of the station's location                                                                         |
++--------------+------------------------------------------------------------------------------------------------------------+
+| Opening Data | The date that the station began offering the fuel.                                                         |
++--------------+------------------------------------------------------------------------------------------------------------+
+| Latitude     | The latitude of the station's address                                                                      |
++--------------+------------------------------------------------------------------------------------------------------------+
+| Longitude    | The longitude of the station's address                                                                     |
++--------------+------------------------------------------------------------------------------------------------------------+
+| Fuel Type    | The type of alternative fuel the station provides. Fuel types are given as code values as described below: |
+|              |                                                                                                            |
+|              | | Value | Description                  |                                                                   |
+|              | |-------|------------------------------|                                                                   |
+|              | | BD    | Biodiesel (B20 and above)    |                                                                   |
+|              | | CNG   | Compressed Natural Gas (CNG) |                                                                   |
+|              | | ELEC  | Electric                     |                                                                   |
+|              | | E85   | Ethanol (E85)                |                                                                   |
+|              | | HY    | Hydrogen                     |                                                                   |
+|              | | LNG   | Liquefied Natural Gas (LNG)  |                                                                   |
+|              | | LPG   | Propane (LPG)                |                                                                   |
++--------------+------------------------------------------------------------------------------------------------------------+
+
+### Population Data
+
+The main features from the [2020 Census data](https://www.census.gov/data/tables/time-series/dec/density-data-text.html) that this analysis will focus on are the following:
+
+| Name               | Description                                                        |
+|--------------------|--------------------------------------------------------------------|
+| Population         | Resident population estimates                                      |
+| Population density | Resident population densities for each state (residents / sq. mi.) |
+
+### Load Libraries
+
+For this analysis we'll make use of the tidyverse ecosystem and ggpubr for displaying correlations on plots.
+
+```{r load-libraries}
+library(tidytuesdayR)
+library(tidyverse)
+library(tidymodels)
+library(lubridate)
+library(ggpubr)
+```
+
+### Import Data
+
+The 03/01/2022 Tidy Tuesday data is loaded in using the tidytuesdayR package, along with the Census data. We can also create a state reference dataframe to help with merging tables where one has the state abbreviation and the other has the state's full name. The state area can also be added to later calculate station densities.
+```{r import-data}
+tuesdata <- tidytuesdayR::tt_load('2022-03-01')
+stations_raw <- tuesdata$stations
+
+#https://www.census.gov/data/tables/time-series/dec/density-data-text.html
+pop_density_raw <- read_csv("https://www2.census.gov/programs-surveys/decennial/2020/data/apportionment/apportionment.csv")
+
+# create state abbrevation/name ref table
+states_ref <- tibble(
+    name = state.name,
+    abbr = state.abb,
+    area = state.area
+)
+```
+
+## Clean Data
+
+The Census data is processed by only selecting data from the year 2020 from observations that are states. The columns are also renamed for convenience and only the relevant ones are selected from the data. The resulting dataframe is then joined with the `states_ref` dataframe to get the state abbreviations to help when joining with the alternative fuel station dataframe.
+
+```{r clean-pop-density-data, include = FALSE}
+ pop_density <- pop_density_raw |> 
+    # only look at the year 2020 and state data
+    filter(Year == 2020, `Geography Type` == "State") |> 
+    # rename and select releveant columns
+    transmute(state = Name, pop_den = `Resident Population Density`, pop=`Resident Population`) |> 
+    # join with the states_ref data to get the state abbreviations
+    inner_join(states_ref, by=c("state" = "name"))
+```
+
+The `stations_raw` data is cleaned by changing the categorical data to factors and changing the `OPEN_DATE` variable from a string to a date. The latitude/longitudes are also filtered to restrict the data to only that found in the US. The data is then joined with the census data.
+
+```{r clean-station-data}
+stations <- stations_raw |> 
+    # rename columns, convert to factors and dates
+    transmute(state = factor(STATE), city = factor(CITY), lat = LATITUDE, lon = LONGITUDE, open_date = ymd_hms(OPEN_DATE), fuel_type = factor(FUEL_TYPE_CODE)) |> 
+    # filter by lat/lon for continental US
+    filter(lat > 24 & lat < 52, lon < -64 & lon > -126) |> 
+    # join with the population data
+    inner_join(pop_density, by=c("state" = "abbr")) |> 
+    # rename the state columns
+    rename(abbr = state, state = state.y) |> 
+    # move the state column to the front
+    relocate(state, .before = everything())
+```
+
+# Exploratory Data Analysis
+
+### How are Fuel Stations Distributed Across the US
+
+We can create a histogram of stations by their latitude to get a one dimensional view of how they are distributed from south to north. The histograms can be separated based on fuel type to see how the distributions for each vary. Note that the y-axis is varies by histogram, so the bar heights themselves are not comparable between plots.
+
+```{r}
+stations |> 
+    ggplot(aes(lat)) +
+    geom_histogram(bins=15) + 
+    facet_wrap(vars(fuel_type), scales="free_y") + 
+    labs(x="Latitude", y="Electric Stations", title="Distribution of Electric Stations by Latitude")
+```
+
+We can see from the histograms that electric, hydrogen, Liquified Natural Gas, and Propane are mostly used in the middle latitudes. This may be a result of a large number of cities such as Baltimore, Washington D.C. Philadelphia, Denver, and San Franscio being located in the central latitudes.
+
+Ethanol's distribution is left scewed, showing that more stations are used in the northern latitudes than the southern latitudes.
+
+We can do the same for longitudes to better understand the distribution of fuel stations from west to east.
+
+```{r}
+stations |> 
+    ggplot(aes(lon)) +
+    geom_histogram(bins=15) + 
+    facet_wrap(vars(fuel_type), scales="free_y") + 
+    labs(x="Longitude", y="Stations", title="Distribution of Stations by Longitude")
+```
+Looking at the longitude distributions, we can see that more electric fuel stations are located in the west and east coasts than in the middle of the country. Ethanol and Propane however are more prominent in the middle of the country than closer to the coasts.
+
+To better visualize teh overall distribution, we can create a new map showing the locations of each fuel station. To reduce clutter, we can plot each fuel type separately and color by state.
+
+```{r}
+stations |> 
+    ggplot(aes(lon, lat, color=state)) +
+    borders("state") + 
+    geom_point(size=0.1, alpha=.4, show.legend = FALSE) +
+    coord_map() +
+    theme_void() +
+    facet_wrap(vars(fuel_type)) + 
+    labs(title="Locations of Each Station Fuel Type")
+```
+From looking at the maps, electric fuel stations seem to vastly outnumber all other fuel stations, with Hydrogen looking to be the least utilized. Biodiesel looks to be very prominent in North Carolina and South Carolina, filling most of the states, as well as the southern part of Minnesota. Ethanol looks to be most prominently used in the Great Lakes and part of the Mid-West. 
+
+
+Because electric fuel stations are the most most prominent type, we can take a more detailed look at that map.
+```{r}
+stations |> 
+    filter(fuel_type == "ELEC") |> 
+    ggplot(aes(lon, lat, color=state)) +
+    borders("state") + 
+    geom_point(size=.1, alpha=.2, show.legend = FALSE) +
+    coord_map() +
+    theme_void() + 
+    labs(title="Locations for all Electric Stations")
+```
+
+
+## Fuel Types
+
+We can get a clearer picture of how many more electric fuel stations there are than any other kind with a bar chart.
+
+```{r plot-fuel-types}
+stations |> 
+    group_by(fuel_type) |> 
+    summarize(n = n()) |> 
+    mutate(fuel_type = fct_reorder(fuel_type, n)) |> 
+    ggplot(aes(fuel_type, n, fill = fuel_type)) + 
+    geom_col(show.legend = FALSE) + 
+    coord_flip() +
+    labs(x="", y="Total Stations", title="Total Number of Stations for Each Fuel Type")
+	
+```
+It's clear from the plot above that electric fuel stations vastly outnumber every other fuel station combined. Because electric stations make up the vast majority of stations, we will reduce our scope to only those by filtering our data to only contain electric fueling stations.
+
+```{r}
+station_elec <- stations |> 
+    filter(fuel_type == "ELEC")
+```
+
+Focusing on electric fuel stations, we can look at which cities have the most stations.
+
+```{r plot-elec-cities}
+station_elec |> 
+    # count the stations in each city, state
+    count(state, city) |> 
+    # order from most to least
+    arrange(desc(n)) |> 
+    # get the top 20 cities with the most stations
+    head(20) |> 
+    # reorder the factors based on the most stations
+    mutate(city = fct_reorder(city, n)) |> 
+    ggplot(aes(city, n, fill=state)) +
+    geom_col() + 
+    coord_flip() + 
+    labs(x="", y="Total Electric Stations", title="Total Electric Stations by City")
+```
+
+The city of Los Angeles has the most electric fuel stations and about twice as much as the San Diego which has the second highest number of stations. 9 out of the 20 cities with the highest number of electric fuel stations are in California, indicating that California may contain more stations than any other state.
+
+We can confirm this by now plotting the states with the highest number of stations.
+
+```{r plot-elec-states}
+station_elec |> 
+    # count the number of stations in each state
+    count(state) |>  
+    # reorder the factors based on number of stations
+    mutate(state = fct_reorder(state, n)) |> 
+    ggplot(aes(state, n, fill=state)) +
+    geom_col(show.legend = FALSE) + 
+    coord_flip() + 
+    labs(x="", y="Total Number of Stations", title="Total Number of Electric Stations by State")
+```
+Based on the plot above, California clearly leads the country in number of electric fueling stations. How do they compare when taking into account the size of the state?
+
+By dividing the total number of stations each state has by the area of the state we can get a "station density" for each state to get a clearer picture of how many stations each state has, taking into account the size of the state. For example, if a very large state such as Texas has as many fueling stations as a smaller state like Massachusetts, then Massachusetts likely has better electric station coverage than Texas as the distance between stations is important for fueling during travel.
+
+```{r plot-elec-states-density}
+station_pop_den <- station_elec |> 
+    # count stations in each state
+    count(state, pop_den) |> 
+    # join the state reference table to get the land area
+    inner_join(states_ref, by=c("state" = "name")) |> 
+    # keep only the state and pop density and calculate the station density
+    transmute(state, pop_den, station_den = n / area) |> 
+    # reorder the factors based on station density
+    mutate(state = fct_reorder(state, station_den))
+
+station_pop_den |> 
+    ggplot(aes(state, station_den, fill=state)) +
+    geom_col(show.legend = FALSE) + 
+    coord_flip() +
+    labs(x="", y="Electric Station Density (station / sq. mi.)", title="Electric Station Density by State")
+```
+
+# Model Building
+
+## Regressing Station Density on Population Density
+
+A sufficient number of fuel stations must be created to cover the size of the land area and the population of people that they are meant to serve. Given that fuel stations are being produced to meet the needs of their land area and populations, we can expect to see a positive correlation between the population density of a given state and the station density in that state.
+
+```{r}
+station_pop_den |> 
+    ggplot(aes(pop_den, station_den)) +
+    geom_point() + 
+    # put both axes on log scale to transform exponential data to linear
+    scale_x_log10() + 
+    scale_y_log10() + 
+    geom_smooth(method = "lm", se=FALSE) + 
+    stat_cor() + 
+    geom_text(aes(label=state), check_overlap = TRUE, vjust = 1, hjust = 1) + 
+    labs(y="Electric Station Density (station / sq. mi.)", x = "Population Density (population / sq. mi.)" , title="Do States with Higher Population Densities Have Higher Station Densities?")
+```
+
+```{r}
+lm_mod <- linear_reg() |> 
+  fit(log10(station_den) ~ log10(pop_den), data=station_pop_den)
+```
+
+```{r}
+tidy(lm_mod)
+```
+
+```{r}
+glance(lm_mod)
+```
+
