@@ -66,6 +66,7 @@ library(ggpubr)
 library(lubridate)
 library(tidymodels)
 library(knitr)
+library(gganimate)
 theme_set(theme_light())
 ```
 
@@ -88,18 +89,21 @@ states_ref <- tibble(
 )
 ```
 
+
 ## Clean Data
 
 The Census data is processed by only selecting data from the year 2020 from observations that are states. The columns are also renamed for convenience and only the relevant ones are selected from the data. The resulting dataframe is then joined with the `states_ref` dataframe to get the state abbreviations to help when joining with the alternative fuel station dataframe.
 
 ```{r clean-pop-density-data}
  pop_density <- pop_density_raw |> 
-    # only look at the year 2020 and state data
-    filter(Year == 2020, `Geography Type` == "State") |> 
+    # only look at the state data
+    filter(`Geography Type` == "State") |> 
     # rename and select releveant columns
-    transmute(state = Name, pop_den = `Resident Population Density`, pop=`Resident Population`) |> 
+    transmute(state = Name, year = Year, pop_den = `Resident Population Density`, pop=`Resident Population`) |> 
     # join with the states_ref data to get the state abbreviations
     inner_join(states_ref, by=c("state" = "name"))
+
+pop_density_2022 <- filter(pop_density, year == "2020")
 ```
 
 The `stations_raw` data is cleaned by changing the categorical data to factors and changing the `OPEN_DATE` variable from a string to a date. The latitude/longitudes are also filtered to restrict the data to only that found in the US. The data is then joined with the census data.
@@ -114,17 +118,17 @@ stations <- stations_raw |>
       lon = LONGITUDE, 
       fuel_type = factor(FUEL_TYPE_CODE),
       open_date = ymd_hms(OPEN_DATE)
-      
       ) |> 
     # filter by lat/lon for continental US
     filter(lat > 24 & lat < 52, lon < -64 & lon > -126) |> 
     # join with the population data
-    inner_join(pop_density, by=c("state" = "abbr")) |> 
+    inner_join(pop_density_2022, by=c("state" = "abbr")) |> 
     # rename the state columns
     rename(abbr = state, state = state.y) |> 
     # move the state column to the front
     relocate(state, .before = everything())
 ```
+
 
 # Exploratory Data Analysis
 
@@ -190,6 +194,23 @@ stations |>
     coord_map() +
     theme_void() + 
     labs(title="Locations for all Electric Stations")
+```
+
+Adding animation to the map allows us to view how the distributions of electric fueling stations changed as more were added over time. It appears from the animation that there was an explosion of electric station starting in the years 2010 and 2011 which is likely due to the fact that the first mass produced electric vehicles, the Nissan Leaf and Chevy Volt, were released in December 2010.
+
+```{r}
+stations |> 
+    filter(fuel_type == "ELEC", !is.na(open_date)) |> 
+    mutate(open_date = year(open_date)) |> 
+    ggplot(aes(lon, lat, color=state)) +
+    borders("state") + 
+    geom_point(size=.1, alpha = .4, show.legend = FALSE) +
+    coord_map() +
+    theme_void() + 
+    labs(title="Electric Fueling Stations", 
+         subtitle="Year: {round(frame_time)}") + 
+    transition_time(as.numeric(open_date)) + 
+    shadow_mark()
 ```
 
 ## Fuel Types
