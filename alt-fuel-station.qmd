@@ -165,7 +165,6 @@ We can create a histogram of stations by their latitude to get a one dimensional
 
 ```{r}
 stations |> 
-    
     ggplot(aes(lat)) +
     geom_histogram(bins=15) + 
     facet_wrap(vars(fuel_type), scales="free_y") + 
@@ -237,6 +236,109 @@ stations |>
     labs(title="Electric Fueling Stations", 
          subtitle="Year: {round(frame_along)}") + 
     transition_reveal(open_year)
+```
+
+Plotting the cumulative sum of station openings over time, we can see a steady increase in stations over the years. lectric charging stations began steadily increasing around 2011, a bit after the release of the Nissan Leaf and Chevy Volt, the first mass produced electric vehicles. Then around 2018, growth of electric charging stations increased, possibly due continued popularity of the Leaf the slow release of the Tesla Model 3 beginning to ship cars at a steadier rate. 
+
+```{r}
+
+leaf_volt <- as.POSIXct("2010-12-15")
+model_s <- as.POSIXct("2012-06-22")
+model_3 <- as.POSIXct("2017-07-07")
+
+cuml_stations <- stations %>%
+    filter(fuel_type == "ELEC") |> 
+    group_by(open_date) %>%
+    arrange(open_date) %>%
+    summarize(total = n()) %>%
+    mutate(sum = cumsum(total))
+
+cuml_stations |> 
+    ggplot(aes(open_date, sum)) +
+    geom_line(show.legend = FALSE) + 
+    scale_x_datetime(date_break = "year", date_labels = "%Y") + 
+    geom_vline(
+      xintercept = leaf_volt, 
+      linetype="longdash", 
+      color="darkred"
+      ) +
+    annotate(
+      "text", 
+      x=as.POSIXct("2010-06-01"), 
+      y=25000, 
+      label=str_wrap("Nissan Leaf and Chevy Volt released", width=10), 
+      size=2,
+      color="darkred"
+      ) +
+    geom_vline(
+      xintercept = model_s, 
+      linetype="longdash", 
+      color="darkred"
+      ) + 
+    annotate(
+      "text", 
+      x=as.POSIXct("2012-01-01"), 
+      y=25000, 
+      label=str_wrap("Telsa Model S released", width=10), 
+      size=2,
+      color="darkred"
+      ) +
+    geom_vline(
+      xintercept = model_3, 
+      linetype="longdash", 
+      color="darkred"
+      ) + 
+    geom_vline(
+      xintercept = model_3, 
+      linetype="longdash", 
+      color="darkred"
+      ) + 
+    annotate(
+      "text", 
+      x=as.POSIXct("2017-01-01"), 
+      y=25000, 
+      label=str_wrap("Telsa Model 3 released", width=10), 
+      size=2,
+      color="darkred"
+      ) +
+    labs(
+      x = "", 
+      y = "Total Electric Stations", 
+      title="Total Electric Stations over Time"
+      ) +
+    annotate(
+      "segment", 
+      x= as.POSIXct("2011-02-01"), 
+      xend=as.POSIXct("2012-02-01"), 
+      y=3000, 
+      yend=3000, 
+      arrow = arrow(ends = "both", angle = 90, length = unit(.2,"cm")),
+      color="darkblue"
+      ) + 
+    annotate(
+      "text", 
+      x=as.POSIXct("2011-09-01"),
+      y=5500, 
+      label=str_wrap("openings begin steadily rising", width=15),
+      color = "darkblue",
+      size = 2
+      ) +
+    annotate(
+      "segment", 
+      x= as.POSIXct("2018-08-01"), 
+      xend=as.POSIXct("2018-11-01"), 
+      y=20000, 
+      yend=14000, 
+      arrow = arrow(), 
+      color="darkblue") +
+    annotate(
+      "text", 
+      x=as.POSIXct("2018-08-01"),
+      y=21000, 
+      label=str_wrap("rate of openings increase", width=30),
+      color = "darkblue",
+      size = 2
+      )
 ```
 
 ## Fuel Types
@@ -345,7 +447,7 @@ pop_station_den |>
 
 ### Regressing Station Density on Population Density
 
-A sufficient number of fuel stations must be created to cover the size of the land area and the population of people that they are meant to serve. Given that fuel stations are being produced to meet the needs of their land area and populations, we can expect to see a positive correlation between the population density of a given state and the station density in that state.
+A sufficient number of fuel stations must be created to cover the area of land and the population of people that they are meant to serve. Given that fuel stations are being produced to meet the needs of their land area and population, we can expect to see a positive correlation between the population density of a given state and the station density in that state.
 
 ```{r}
 pop_station_den_2020 <- filter(pop_station_den, open_year==2020)
@@ -385,6 +487,7 @@ The linear regression model shows a strong correlation of 0.93 between the popul
 Because we used a logarithmic transform for both the predictor and response variables, we **cannot** simply infer that for each 1 unit increase in the population density, we expect to see, on average, a `r coef$estimate` $\pm$ `r coef$estimate - coef$conf.low` increase in station density. Instead, taking the logarithmic transforms into account, we can infer from this model that for every 1% increase in the population density of a state, we can expect, on average, a `r coef$estimate`% $\pm$ `r coef$estimate - coef$conf.low`% increase in the station density for that state ([UVA Library StatLab](https://data.library.virginia.edu/interpreting-log-transformations-in-a-linear-model/)).
 
 
+We can create an animated version of the plot above to see how the regression line has changed over time:
 ```{r}
 pop_station_den |> 
   #filter(state == "Wyoming") |> 
@@ -403,4 +506,10 @@ pop_station_den |>
     )
 ```
 
+The slope of the regression line is fairly stable between 2010 and 2020 and seems to have remained about the same between 2013 and 2020. In addition to the consistency in slope, the correlation appears to be consistent during that time as well. As expected, population densities  had negligible change, but there has been a steady rise in electric charging stations as we have seen in previous animations. Based on the steady correlations we're seeing in this animation, it appears that each state is increasing their electric station density at around the same exponential rate (data has been log transformed). 
+
+It could be interesting to see how this trend evolves over time as more data becomes available. We may see the intercept coefficient continue to increase with the electric station density, but the slope relationship between population density and station density remain the same, indicating that there is a stable (and possibly planned) relationship between population density and station density to meet the needs electric vehicle owners across all states.
+
 ## Conclusion
+
+This analysis focused on understanding the distribution electric fueling stations across the US between the years 2010-2020 and attempted to better understand the relationship between a states population and the number of stations in the state. Electric vehicle charging station growth rate seems to coincide with the release of popular electric cars which drive larger adoption of electric vehicles and increase the demand for electric charging stations. We also showed a strong correlation between the population density of a state and the number of electric charging stations per square mile in that state. From this, we were able to infer that for every 1% increase in the population density of a state, we can expect, on average, a `r coef$estimate`% $\pm$ `r coef$estimate - coef$conf.low`% increase in the station density for that state. Looking at an animation of this trend through time, the slope and strength of correlation appear to be consistent through much of 2010 - 2020.
