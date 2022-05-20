@@ -6,71 +6,73 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, error = FALSE)
 ```
 
 # Introduction
 
-The dataset used for this analysis contains information on [alternative fuel stations](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-03-01/readme.md) from the [R for Data Science's Tidy Tuesday Github page](https://github.com/rfordatascience/tidytuesday). The original source of the data is the [US Department of Energy](https://afdc.energy.gov/data_download/alt_fuel_stations_format). The goal for this analysis is to look which alternative fuel stations are most prominent, how they're distributed accross the US, and what relationships exist between state populations and the number of stations in each state.
-
-# Data Wrangling
-
-## Data and Tool Setup
+The dataset used for this analysis contains information on [alternative fuel stations](https://github.com/rfordatascience/tidytuesday/blob/master/data/2022/2022-03-01/readme.md) from the [R for Data Science's Tidy Tuesday Github page](https://github.com/rfordatascience/tidytuesday). The original source of the data is the [US Department of Energy](https://afdc.energy.gov/data_download/alt_fuel_stations_format). The goal for this analysis is to better understand which alternative fuel stations are most prominent, how they're distributed accross the US, and what relationships exist between state populations and the number of stations in each state.
 
 ### Alternative Fuel Station Data
 
 The main features from the [alternative fuel stations data](https://afdc.energy.gov/data_download/alt_fuel_stations_format) that this analysis will focus on are the following:
 
-+--------------+------------------------------------------------------------------------------------------------------------+
-| Name         | Description                                                                                                |
-+==============+============================================================================================================+
-| State        | The two character code for the U.S. state or Canadian province/territory of the station's location         |
-+--------------+------------------------------------------------------------------------------------------------------------+
-| City         | The city of the station's location                                                                         |
-+--------------+------------------------------------------------------------------------------------------------------------+
-| Opening Data | The date that the station began offering the fuel.                                                         |
-+--------------+------------------------------------------------------------------------------------------------------------+
-| Latitude     | The latitude of the station's address                                                                      |
-+--------------+------------------------------------------------------------------------------------------------------------+
-| Longitude    | The longitude of the station's address                                                                     |
-+--------------+------------------------------------------------------------------------------------------------------------+
-| Fuel Type    | The type of alternative fuel the station provides. Fuel types are given as code values as described below: |
-|              |                                                                                                            |
-|              | | Value | Description                  |                                                                   |
-|              | |-------|------------------------------|                                                                   |
-|              | | BD    | Biodiesel (B20 and above)    |                                                                   |
-|              | | CNG   | Compressed Natural Gas (CNG) |                                                                   |
-|              | | ELEC  | Electric                     |                                                                   |
-|              | | E85   | Ethanol (E85)                |                                                                   |
-|              | | HY    | Hydrogen                     |                                                                   |
-|              | | LNG   | Liquefied Natural Gas (LNG)  |                                                                   |
-|              | | LPG   | Propane (LPG)                |                                                                   |
-+--------------+------------------------------------------------------------------------------------------------------------+
++------------+------------------------------------------------------------------------------------------------------------+
+| Name       | Description                                                                                                |
++============+============================================================================================================+
+| State      | The two character code for the U.S. state or Canadian province/territory of the station's location         |
++------------+------------------------------------------------------------------------------------------------------------+
+| City       | The city of the station's location                                                                         |
++------------+------------------------------------------------------------------------------------------------------------+
+| Latitude   | The latitude of the station's address                                                                      |
++------------+------------------------------------------------------------------------------------------------------------+
+| Longitude  | The longitude of the station's address                                                                     |
++------------+------------------------------------------------------------------------------------------------------------+
+| Fuel Type  | The type of alternative fuel the station provides. Fuel types are given as code values as described below: |
+|            |                                                                                                            |
+|            | | Value | Description                  |                                                                   |
+|            | |-------|------------------------------|                                                                   |
+|            | | BD    | Biodiesel (B20 and above)    |                                                                   |
+|            | | CNG   | Compressed Natural Gas (CNG) |                                                                   |
+|            | | ELEC  | Electric                     |                                                                   |
+|            | | E85   | Ethanol (E85)                |                                                                   |
+|            | | HY    | Hydrogen                     |                                                                   |
+|            | | LNG   | Liquefied Natural Gas (LNG)  |                                                                   |
+|            | | LPG   | Propane (LPG)                |                                                                   |
++------------+------------------------------------------------------------------------------------------------------------+
 
 ### Population Data
 
 The main features from the [2020 Census data](https://www.census.gov/data/tables/time-series/dec/density-data-text.html) that this analysis will focus on are the following:
 
++--------------------+--------------------------------------------------------------------+
 | Name               | Description                                                        |
-|--------------------|--------------------------------------------------------------------|
++====================+====================================================================+
 | Population         | Resident population estimates                                      |
++--------------------+--------------------------------------------------------------------+
 | Population density | Resident population densities for each state (residents / sq. mi.) |
++--------------------+--------------------------------------------------------------------+
+
+# Data Wrangling
 
 ### Load Libraries
 
-For this analysis we'll make use of the tidyverse ecosystem and ggpubr for displaying correlations on plots.
+For this analysis we'll make use of the `tidytuesdayR` package to load the Tidy Tuesday dataset; the `tidyverse` ecosystem for data tidying, manipulation, exploration, and visualization; `ggpubr` for displaying correlations on plots; `lubridate` for handling datetimes; `tidymodels` for building a regression model; and `kntr` for creating tables.
 
 ```{r load-libraries}
 library(tidytuesdayR)
 library(tidyverse)
-library(tidymodels)
-library(lubridate)
 library(ggpubr)
+library(lubridate)
+library(tidymodels)
+library(knitr)
+theme_set(theme_light())
 ```
 
 ### Import Data
 
 The 03/01/2022 Tidy Tuesday data is loaded in using the tidytuesdayR package, along with the Census data. We can also create a state reference dataframe to help with merging tables where one has the state abbreviation and the other has the state's full name. The state area can also be added to later calculate station densities.
+
 ```{r import-data}
 tuesdata <- tidytuesdayR::tt_load('2022-03-01')
 stations_raw <- tuesdata$stations
@@ -90,7 +92,7 @@ states_ref <- tibble(
 
 The Census data is processed by only selecting data from the year 2020 from observations that are states. The columns are also renamed for convenience and only the relevant ones are selected from the data. The resulting dataframe is then joined with the `states_ref` dataframe to get the state abbreviations to help when joining with the alternative fuel station dataframe.
 
-```{r clean-pop-density-data, include = FALSE}
+```{r clean-pop-density-data}
  pop_density <- pop_density_raw |> 
     # only look at the year 2020 and state data
     filter(Year == 2020, `Geography Type` == "State") |> 
@@ -105,7 +107,15 @@ The `stations_raw` data is cleaned by changing the categorical data to factors a
 ```{r clean-station-data}
 stations <- stations_raw |> 
     # rename columns, convert to factors and dates
-    transmute(state = factor(STATE), city = factor(CITY), lat = LATITUDE, lon = LONGITUDE, open_date = ymd_hms(OPEN_DATE), fuel_type = factor(FUEL_TYPE_CODE)) |> 
+    transmute(
+      state = factor(STATE), 
+      city = factor(CITY), 
+      lat = LATITUDE, 
+      lon = LONGITUDE, 
+      fuel_type = factor(FUEL_TYPE_CODE),
+      open_date = ymd_hms(OPEN_DATE)
+      
+      ) |> 
     # filter by lat/lon for continental US
     filter(lat > 24 & lat < 52, lon < -64 & lon > -126) |> 
     # join with the population data
@@ -127,7 +137,11 @@ stations |>
     ggplot(aes(lat)) +
     geom_histogram(bins=15) + 
     facet_wrap(vars(fuel_type), scales="free_y") + 
-    labs(x="Latitude", y="Electric Stations", title="Distribution of Electric Stations by Latitude")
+    labs(
+      x="Latitude", 
+      y="Electric Stations", 
+      title="Distribution of Electric Stations by Latitude"
+      )
 ```
 
 We can see from the histograms that electric, hydrogen, Liquified Natural Gas, and Propane are mostly used in the middle latitudes. This may be a result of a large number of cities such as Baltimore, Washington D.C. Philadelphia, Denver, and San Franscio being located in the central latitudes.
@@ -141,8 +155,13 @@ stations |>
     ggplot(aes(lon)) +
     geom_histogram(bins=15) + 
     facet_wrap(vars(fuel_type), scales="free_y") + 
-    labs(x="Longitude", y="Stations", title="Distribution of Stations by Longitude")
+    labs(
+      x="Longitude", 
+      y="Stations", 
+      title="Distribution of Stations by Longitude"
+      )
 ```
+
 Looking at the longitude distributions, we can see that more electric fuel stations are located in the west and east coasts than in the middle of the country. Ethanol and Propane however are more prominent in the middle of the country than closer to the coasts.
 
 To better visualize teh overall distribution, we can create a new map showing the locations of each fuel station. To reduce clutter, we can plot each fuel type separately and color by state.
@@ -157,10 +176,11 @@ stations |>
     facet_wrap(vars(fuel_type)) + 
     labs(title="Locations of Each Station Fuel Type")
 ```
-From looking at the maps, electric fuel stations seem to vastly outnumber all other fuel stations, with Hydrogen looking to be the least utilized. Biodiesel looks to be very prominent in North Carolina and South Carolina, filling most of the states, as well as the southern part of Minnesota. Ethanol looks to be most prominently used in the Great Lakes and part of the Mid-West. 
 
+From looking at the maps, electric fuel stations seem to vastly outnumber all other fuel stations, with Hydrogen looking to be the least utilized. Biodiesel looks to be very prominent in North Carolina and South Carolina, filling most of the states, as well as the southern part of Minnesota. Ethanol looks to be most prominently used in the Great Lakes and part of the Mid-West.
 
 Because electric fuel stations are the most most prominent type, we can take a more detailed look at that map.
+
 ```{r}
 stations |> 
     filter(fuel_type == "ELEC") |> 
@@ -172,7 +192,6 @@ stations |>
     labs(title="Locations for all Electric Stations")
 ```
 
-
 ## Fuel Types
 
 We can get a clearer picture of how many more electric fuel stations there are than any other kind with a bar chart.
@@ -182,12 +201,17 @@ stations |>
     group_by(fuel_type) |> 
     summarize(n = n()) |> 
     mutate(fuel_type = fct_reorder(fuel_type, n)) |> 
-    ggplot(aes(fuel_type, n, fill = fuel_type)) + 
-    geom_col(show.legend = FALSE) + 
+    ggplot(aes(fuel_type, n)) + 
+    geom_col(show.legend = FALSE, fill="darkblue") + 
     coord_flip() +
-    labs(x="", y="Total Stations", title="Total Number of Stations for Each Fuel Type")
+    labs(
+      x="", 
+      y="Total Stations", 
+      title="Total Number of Stations for Each Fuel Type"
+      )
 	
 ```
+
 It's clear from the plot above that electric fuel stations vastly outnumber every other fuel station combined. Because electric stations make up the vast majority of stations, we will reduce our scope to only those by filtering our data to only contain electric fueling stations.
 
 ```{r}
@@ -210,7 +234,12 @@ station_elec |>
     ggplot(aes(city, n, fill=state)) +
     geom_col() + 
     coord_flip() + 
-    labs(x="", y="Total Electric Stations", title="Total Electric Stations by City")
+    labs(
+      x="", 
+      y="Total Electric Stations", 
+      title="Total Electric Stations by City", 
+      fill="State"
+      )
 ```
 
 The city of Los Angeles has the most electric fuel stations and about twice as much as the San Diego which has the second highest number of stations. 9 out of the 20 cities with the highest number of electric fuel stations are in California, indicating that California may contain more stations than any other state.
@@ -223,11 +252,16 @@ station_elec |>
     count(state) |>  
     # reorder the factors based on number of stations
     mutate(state = fct_reorder(state, n)) |> 
-    ggplot(aes(state, n, fill=state)) +
-    geom_col(show.legend = FALSE) + 
+    ggplot(aes(state, n)) +
+    geom_col(show.legend = FALSE, fill="darkblue") + 
     coord_flip() + 
-    labs(x="", y="Total Number of Stations", title="Total Number of Electric Stations by State")
+    labs(
+      x="", 
+      y="Total Number of Stations", 
+      title="Total Number of Electric Stations by State"
+      )
 ```
+
 Based on the plot above, California clearly leads the country in number of electric fueling stations. How do they compare when taking into account the size of the state?
 
 By dividing the total number of stations each state has by the area of the state we can get a "station density" for each state to get a clearer picture of how many stations each state has, taking into account the size of the state. For example, if a very large state such as Texas has as many fueling stations as a smaller state like Massachusetts, then Massachusetts likely has better electric station coverage than Texas as the distance between stations is important for fueling during travel.
@@ -244,15 +278,19 @@ station_pop_den <- station_elec |>
     mutate(state = fct_reorder(state, station_den))
 
 station_pop_den |> 
-    ggplot(aes(state, station_den, fill=state)) +
-    geom_col(show.legend = FALSE) + 
+    ggplot(aes(state, station_den)) +
+    geom_col(show.legend = FALSE, fill="darkblue") + 
     coord_flip() +
-    labs(x="", y="Electric Station Density (station / sq. mi.)", title="Electric Station Density by State")
+    labs(
+      x="", 
+      y="Electric Station Density (station / sq. mi.)", 
+      title="Electric Station Density by State"
+      )
 ```
 
 # Model Building
 
-## Regressing Station Density on Population Density
+### Regressing Station Density on Population Density
 
 A sufficient number of fuel stations must be created to cover the size of the land area and the population of people that they are meant to serve. Given that fuel stations are being produced to meet the needs of their land area and populations, we can expect to see a positive correlation between the population density of a given state and the station density in that state.
 
@@ -266,19 +304,27 @@ station_pop_den |>
     geom_smooth(method = "lm", se=FALSE) + 
     stat_cor() + 
     geom_text(aes(label=state), check_overlap = TRUE, vjust = 1, hjust = 1) + 
-    labs(y="Electric Station Density (station / sq. mi.)", x = "Population Density (population / sq. mi.)" , title="Do States with Higher Population Densities Have Higher Station Densities?")
+    labs(
+      y="Electric Station Density (station / sq. mi.)", 
+      x = "Population Density (population / sq. mi.)" , 
+      title="Do States with Higher Population Densities Have Higher Station Densities?"
+      )
 ```
-
+We can build the linear model to make inferences about the relationship. We'll use a log transform for both the predictor and response variables as we did above in the plot.
 ```{r}
+# build a linear regression model regressing station density onto population density
 lm_mod <- linear_reg() |> 
   fit(log10(station_den) ~ log10(pop_den), data=station_pop_den)
+# get the 95% confidence intervals
+coef <- tidy(lm_mod, conf.int = TRUE, conf.level=0.95) |> 
+  filter(term != "(Intercept)")
+coef |> 
+  select(estimate, conf.low, conf.high) |> 
+  cbind(glance(lm_mod)) |> 
+  select(estimate, r.squared, statistic, conf.low, conf.high, p.value) |> 
+  kable()
 ```
 
-```{r}
-tidy(lm_mod)
-```
+The linear regression model shows a strong correlation of 0.92 between the population density of a state and the station density of that state. With this correlation, we have an $R^2$ showing that our model explains about `r glance(lm_mod)$r.squared`% of the variability in the data. We also obtained a p-value of `r glance(lm_mod)$p.value`. This implies that under a null hypothesis that the linear model has a slope of 0, there is a near zero probability that we would find the calculated slope above from random samples of the data. This indicates that the relationship found between population density and station density is statistically significant.
 
-```{r}
-glance(lm_mod)
-```
-
+Because we used a logarithmic transform for both the predictor and response variables, we **cannot** simply infer that for each 1 unit increase in the population density, we expect to see, on average, a `r coef$estimate` $\pm$ `r coef$estimate - coef$conf.low` increase in station density. Instead, taking the logarithmic transforms into account, we can infer from this model that for every 1% increase in the population density of a state, we can expect, on average, a `r coef$estimate`% $\pm$ `r coef$estimate - coef$conf.low`% increase in the station density for that state ([UVA Library StatLab](https://data.library.virginia.edu/interpreting-log-transformations-in-a-linear-model/)).
