@@ -238,6 +238,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </tbody>
 </table>
 </section>
+<section id="todo-another-entry-for-the-other-census-data" class="level2">
+<h2 class="anchored" data-anchor-id="todo-another-entry-for-the-other-census-data">TODO: Another entry for the other census data</h2>
+</section>
 </section>
 <section id="data-wrangling" class="level1">
 <h1>Data Wrangling</h1>
@@ -266,32 +269,55 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>stations_raw <span class="ot">&lt;-</span> tuesdata<span class="sc">$</span>stations</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">#https://www.census.gov/data/tables/time-series/dec/density-data-text.html</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>pop_density_raw <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"https://www2.census.gov/programs-surveys/decennial/2020/data/apportionment/apportionment.csv"</span>)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># create state abbrevation/name ref table</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>states_ref <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> state.name,</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">abbr =</span> state.abb,</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">area =</span> state.area</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># https://www.census.gov/data/datasets/time-series/demo/popest/2010s-state-total.html</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Census data 2010 - 2019</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>pop_raw <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/national/totals/nst-est2019-alldata.csv"</span>)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">#https://www.census.gov/data/tables/time-series/dec/density-data-text.html</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># census data 1910 - 2020 (every 10 years)</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>pop_raw_2020 <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"https://www2.census.gov/programs-surveys/decennial/2020/data/apportionment/apportionment.csv"</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># create state abbrevation/name ref table</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>states_ref <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> state.name,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">abbr =</span> state.abb,</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">area =</span> state.area</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="clean-data" class="level2">
 <h2 class="anchored" data-anchor-id="clean-data">Clean Data</h2>
-<p>The Census data is processed by only selecting data from the year 2020 from observations that are states. The columns are also renamed for convenience and only the relevant ones are selected from the data. The resulting dataframe is then joined with the <code>states_ref</code> dataframe to get the state abbreviations to help when joining with the alternative fuel station dataframe.</p>
+<p>Our main set of Census data is cleaned by removed non-state values, reshaping the dataframe so each year is in a single column, joining with the <code>state_ref</code> dataframe to get the state land area and finally calculating the population densities. The other set of Census data we’ll be using to get values for 2020, is filtered and joined to our main Census data.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a> pop_density <span class="ot">&lt;-</span> pop_density_raw <span class="sc">|&gt;</span> </span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># only look at the state data</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="st">`</span><span class="at">Geography Type</span><span class="st">`</span> <span class="sc">==</span> <span class="st">"State"</span>) <span class="sc">|&gt;</span> </span>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a> pop_density_2020 <span class="ot">&lt;-</span> pop_raw_2020 <span class="sc">|&gt;</span> </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># only look at the year 2020 and state data</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(Year <span class="sc">==</span> <span class="dv">2020</span>, <span class="st">`</span><span class="at">Geography Type</span><span class="st">`</span> <span class="sc">==</span> <span class="st">"State"</span>) <span class="sc">|&gt;</span> </span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># rename and select releveant columns</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(<span class="at">state =</span> Name, <span class="at">year =</span> Year, <span class="at">pop_den =</span> <span class="st">`</span><span class="at">Resident Population Density</span><span class="st">`</span>, <span class="at">pop=</span><span class="st">`</span><span class="at">Resident Population</span><span class="st">`</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(<span class="at">state =</span> Name, <span class="at">year =</span> <span class="fu">as.character</span>(Year), <span class="at">pop_den =</span> <span class="st">`</span><span class="at">Resident Population Density</span><span class="st">`</span>, <span class="at">pop=</span><span class="st">`</span><span class="at">Resident Population</span><span class="st">`</span>) <span class="sc">|&gt;</span> </span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># join with the states_ref data to get the state abbreviations</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(states_ref, <span class="at">by=</span><span class="fu">c</span>(<span class="st">"state"</span> <span class="ot">=</span> <span class="st">"name"</span>))</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>pop_density_2022 <span class="ot">&lt;-</span> <span class="fu">filter</span>(pop_density, year <span class="sc">==</span> <span class="st">"2020"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(states_ref, <span class="at">by=</span><span class="fu">c</span>(<span class="st">"state"</span> <span class="ot">=</span> <span class="st">"name"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(state, year, pop)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>pop_density <span class="ot">&lt;-</span> pop_raw <span class="sc">|&gt;</span> </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># remove non state observation</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(STATE <span class="sc">!=</span> <span class="st">"00"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># gather the pop estimate column headers into a single column for </span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># year and the values into a new pop column</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">starts_with</span>(<span class="st">"POPESTIMATE"</span>),<span class="at">names_to =</span> <span class="st">"year"</span>, <span class="at">values_to =</span> <span class="st">"pop"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># downselect the columns</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(<span class="at">state =</span> NAME, year, pop) <span class="sc">|&gt;</span> </span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="co"># separate the year from the popestimate text </span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(<span class="at">col=</span>year, <span class="at">sep =</span> <span class="st">"POPESTIMATE"</span>, <span class="at">into=</span><span class="fu">c</span>(<span class="cn">NA</span>, <span class="st">"year"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  <span class="co"># add 2020 data</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(pop_density_2020) <span class="sc">|&gt;</span> </span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  <span class="co"># join with the state area data</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(states_ref, <span class="at">by=</span><span class="fu">c</span>(<span class="st">"state"</span> <span class="ot">=</span> <span class="st">"name"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># calcualte the population density</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">pop_den =</span> pop <span class="sc">/</span> area, <span class="at">year =</span> <span class="fu">as.numeric</span>(year)) <span class="sc">|&gt;</span> </span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  <span class="co"># select the columns of interest</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(state, abbr, year, pop_den, area)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The <code>stations_raw</code> data is cleaned by changing the categorical data to factors and changing the <code>OPEN_DATE</code> variable from a string to a date. The latitude/longitudes are also filtered to restrict the data to only that found in the US. The data is then joined with the census data.</p>
+<p>Since much of this analysis refers to population data and we do not have population densities after the year 2020 available, we will drop any station data for years where we do not have population density data (before 2010, after 2020).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>stations <span class="ot">&lt;-</span> stations_raw <span class="sc">|&gt;</span> </span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># rename columns, convert to factors and dates</span></span>
@@ -301,16 +327,17 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">lat =</span> LATITUDE, </span>
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">lon =</span> LONGITUDE, </span>
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">fuel_type =</span> <span class="fu">factor</span>(FUEL_TYPE_CODE),</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">open_date =</span> <span class="fu">ymd_hms</span>(OPEN_DATE)</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">|&gt;</span> </span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># filter by lat/lon for continental US</span></span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(lat <span class="sc">&gt;</span> <span class="dv">24</span> <span class="sc">&amp;</span> lat <span class="sc">&lt;</span> <span class="dv">52</span>, lon <span class="sc">&lt;</span> <span class="sc">-</span><span class="dv">64</span> <span class="sc">&amp;</span> lon <span class="sc">&gt;</span> <span class="sc">-</span><span class="dv">126</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># join with the population data</span></span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(pop_density_2022, <span class="at">by=</span><span class="fu">c</span>(<span class="st">"state"</span> <span class="ot">=</span> <span class="st">"abbr"</span>)) <span class="sc">|&gt;</span> </span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="co"># rename the state columns</span></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="at">abbr =</span> state, <span class="at">state =</span> state.y) <span class="sc">|&gt;</span> </span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># move the state column to the front</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">relocate</span>(state, <span class="at">.before =</span> <span class="fu">everything</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">open_date =</span> <span class="fu">ymd_hms</span>(OPEN_DATE),</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">open_year =</span> <span class="fu">as.numeric</span>(<span class="fu">year</span>(OPEN_DATE))</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>      ) <span class="sc">|&gt;</span> </span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># filter by lat/lon for continental US</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(lat <span class="sc">&gt;</span> <span class="dv">24</span> <span class="sc">&amp;</span> lat <span class="sc">&lt;</span> <span class="dv">52</span>, lon <span class="sc">&lt;</span> <span class="sc">-</span><span class="dv">64</span> <span class="sc">&amp;</span> lon <span class="sc">&gt;</span> <span class="sc">-</span><span class="dv">126</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># join with the population data</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(pop_density, <span class="at">by=</span><span class="fu">c</span>(<span class="st">"state"</span> <span class="ot">=</span> <span class="st">"abbr"</span>, <span class="st">"open_year"</span> <span class="ot">=</span> <span class="st">"year"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># rename the state columns</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="at">abbr =</span> state, <span class="at">state =</span> state.y) <span class="sc">|&gt;</span> </span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># move the state column to the front</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">relocate</span>(state, <span class="at">.before =</span> <span class="fu">everything</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>
@@ -321,14 +348,15 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>We can create a histogram of stations by their latitude to get a one dimensional view of how they are distributed from south to north. The histograms can be separated based on fuel type to see how the distributions for each vary. Note that the y-axis is varies by histogram, so the bar heights themselves are not comparable between plots.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>stations <span class="sc">|&gt;</span> </span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(lat)) <span class="sc">+</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_histogram</span>(<span class="at">bins=</span><span class="dv">15</span>) <span class="sc">+</span> </span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">facet_wrap</span>(<span class="fu">vars</span>(fuel_type), <span class="at">scales=</span><span class="st">"free_y"</span>) <span class="sc">+</span> </span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">x=</span><span class="st">"Latitude"</span>, </span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">y=</span><span class="st">"Electric Stations"</span>, </span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">title=</span><span class="st">"Distribution of Electric Stations by Latitude"</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>      )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(lat)) <span class="sc">+</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_histogram</span>(<span class="at">bins=</span><span class="dv">15</span>) <span class="sc">+</span> </span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">facet_wrap</span>(<span class="fu">vars</span>(fuel_type), <span class="at">scales=</span><span class="st">"free_y"</span>) <span class="sc">+</span> </span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">x=</span><span class="st">"Latitude"</span>, </span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">y=</span><span class="st">"Electric Stations"</span>, </span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">title=</span><span class="st">"Distribution of Electric Stations by Latitude"</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>      )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="alt-fuel-station_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -380,20 +408,18 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p><img src="alt-fuel-station_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>Adding animation to the map allows us to view how the distributions of electric fueling stations changed as more were added over time. It appears from the animation that there was an explosion of electric station starting in the years 2010 and 2011 which is likely due to the fact that the first mass produced electric vehicles, the Nissan Leaf and Chevy Volt, were released in December 2010.</p>
+<p>Adding animation to the map allows us to view how the distributions of electric fueling stations changed as more were added over time. It appears from the animation that there was an explosion of electric station starting in the years 2011-2012 which is likely due to the fact that the first mass produced electric vehicles, the Nissan Leaf and Chevy Volt, were released in December 2010.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>stations <span class="sc">|&gt;</span> </span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(fuel_type <span class="sc">==</span> <span class="st">"ELEC"</span>, <span class="sc">!</span><span class="fu">is.na</span>(open_date)) <span class="sc">|&gt;</span> </span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">open_date =</span> <span class="fu">year</span>(open_date)) <span class="sc">|&gt;</span> </span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(lon, lat, <span class="at">color=</span>state)) <span class="sc">+</span></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">borders</span>(<span class="st">"state"</span>) <span class="sc">+</span> </span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">size=</span>.<span class="dv">1</span>, <span class="at">alpha =</span> .<span class="dv">4</span>, <span class="at">show.legend =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_map</span>() <span class="sc">+</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_void</span>() <span class="sc">+</span> </span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title=</span><span class="st">"Electric Fueling Stations"</span>, </span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>         <span class="at">subtitle=</span><span class="st">"Year: {round(frame_time)}"</span>) <span class="sc">+</span> </span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transition_time</span>(<span class="fu">as.numeric</span>(open_date)) <span class="sc">+</span> </span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">shadow_mark</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(fuel_type <span class="sc">==</span> <span class="st">"ELEC"</span>, <span class="sc">!</span><span class="fu">is.na</span>(open_year)) <span class="sc">|&gt;</span> </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(lon, lat, <span class="at">color=</span>state)) <span class="sc">+</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">borders</span>(<span class="st">"state"</span>) <span class="sc">+</span> </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">group =</span> <span class="fu">seq_along</span>(open_year)), <span class="at">size=</span>.<span class="dv">1</span>, <span class="at">show.legend =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_map</span>() <span class="sc">+</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_void</span>() <span class="sc">+</span> </span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title=</span><span class="st">"Electric Fueling Stations"</span>, </span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">subtitle=</span><span class="st">"Year: {round(frame_along)}"</span>) <span class="sc">+</span> </span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transition_reveal</span>(open_year)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="alt-fuel-station_files/figure-html/unnamed-chunk-5-1.gif" class="img-fluid"></p>
 </div>
@@ -471,25 +497,31 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>Based on the plot above, California clearly leads the country in number of electric fueling stations. How do they compare when taking into account the size of the state?</p>
 <p>By dividing the total number of stations each state has by the area of the state we can get a “station density” for each state to get a clearer picture of how many stations each state has, taking into account the size of the state. For example, if a very large state such as Texas has as many fueling stations as a smaller state like Massachusetts, then Massachusetts likely has better electric station coverage than Texas as the distance between stations is important for fueling during travel.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>station_pop_den <span class="ot">&lt;-</span> station_elec <span class="sc">|&gt;</span> </span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># count stations in each state</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">count</span>(state, pop_den) <span class="sc">|&gt;</span> </span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># join the state reference table to get the land area</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">inner_join</span>(states_ref, <span class="at">by=</span><span class="fu">c</span>(<span class="st">"state"</span> <span class="ot">=</span> <span class="st">"name"</span>)) <span class="sc">|&gt;</span> </span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># keep only the state and pop density and calculate the station density</span></span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(state, pop_den, <span class="at">station_den =</span> n <span class="sc">/</span> area) <span class="sc">|&gt;</span> </span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># reorder the factors based on station density</span></span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">state =</span> <span class="fu">fct_reorder</span>(state, station_den))</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>station_pop_den <span class="sc">|&gt;</span> </span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(state, station_den)) <span class="sc">+</span></span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_col</span>(<span class="at">show.legend =</span> <span class="cn">FALSE</span>, <span class="at">fill=</span><span class="st">"darkblue"</span>) <span class="sc">+</span> </span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_flip</span>() <span class="sc">+</span></span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">x=</span><span class="st">""</span>, </span>
-<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">y=</span><span class="st">"Electric Station Density (station / sq. mi.)"</span>, </span>
-<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">title=</span><span class="st">"Electric Station Density by State"</span></span>
-<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>      )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>pop_station_den <span class="ot">&lt;-</span> station_elec <span class="sc">|&gt;</span> </span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(state, open_year) <span class="sc">|&gt;</span> </span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(pop_density, <span class="at">by=</span><span class="fu">c</span>(<span class="st">"open_year"</span> <span class="ot">=</span> <span class="st">"year"</span>, <span class="st">"state"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(state, open_year, pop_den, area, <span class="at">name=</span><span class="st">"num_stations"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(state) <span class="sc">|&gt;</span> </span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(state, open_year) <span class="sc">|&gt;</span> </span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">tot_stations =</span> <span class="fu">cumsum</span>(num_stations), <span class="at">station_density =</span> tot_stations <span class="sc">/</span> area)  <span class="sc">|&gt;</span> </span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(state, open_year, pop_den, station_density) <span class="sc">|&gt;</span> </span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">complete</span>(state, open_year) <span class="sc">|&gt;</span> </span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">pop_den =</span> <span class="fu">replace_na</span>(pop_den, <span class="dv">0</span>), <span class="at">station_density =</span> <span class="fu">replace_na</span>(station_density, <span class="dv">0</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We can plot the newly calcualted station densities:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>pop_station_den <span class="sc">|&gt;</span> </span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(open_year <span class="sc">==</span> <span class="dv">2020</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">state =</span> <span class="fu">fct_reorder</span>(state, station_density)) <span class="sc">|&gt;</span> </span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(state, station_density)) <span class="sc">+</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_col</span>(<span class="at">show.legend =</span> <span class="cn">FALSE</span>, <span class="at">fill=</span><span class="st">"darkblue"</span>) <span class="sc">+</span> </span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coord_flip</span>() <span class="sc">+</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">x=</span><span class="st">""</span>, </span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">y=</span><span class="st">"Electric Station Density (station / sq. mi.)"</span>, </span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">title=</span><span class="st">"Electric Station Density by State"</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>      )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="alt-fuel-station_files/figure-html/plot-elec-states-density-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -502,37 +534,39 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h3 class="anchored" data-anchor-id="regressing-station-density-on-population-density">Regressing Station Density on Population Density</h3>
 <p>A sufficient number of fuel stations must be created to cover the size of the land area and the population of people that they are meant to serve. Given that fuel stations are being produced to meet the needs of their land area and populations, we can expect to see a positive correlation between the population density of a given state and the station density in that state.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>station_pop_den <span class="sc">|&gt;</span> </span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(pop_den, station_den)) <span class="sc">+</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># put both axes on log scale to transform exponential data to linear</span></span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_x_log10</span>() <span class="sc">+</span> </span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_y_log10</span>() <span class="sc">+</span> </span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se=</span><span class="cn">FALSE</span>) <span class="sc">+</span> </span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stat_cor</span>() <span class="sc">+</span> </span>
-<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label=</span>state), <span class="at">check_overlap =</span> <span class="cn">TRUE</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">hjust =</span> <span class="dv">1</span>) <span class="sc">+</span> </span>
-<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">y=</span><span class="st">"Electric Station Density (station / sq. mi.)"</span>, </span>
-<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Population Density (population / sq. mi.)"</span> , </span>
-<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">title=</span><span class="st">"Do States with Higher Population Densities Have Higher Station Densities?"</span></span>
-<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>      )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>pop_station_den_2020 <span class="ot">&lt;-</span> <span class="fu">filter</span>(pop_station_den, open_year<span class="sc">==</span><span class="dv">2020</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>pop_station_den_2020 <span class="sc">|&gt;</span> </span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(pop_den, station_density)) <span class="sc">+</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># put both axes on log scale to transform exponential data to linear</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_x_log10</span>() <span class="sc">+</span> </span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_y_log10</span>() <span class="sc">+</span> </span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se=</span><span class="cn">FALSE</span>) <span class="sc">+</span> </span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">stat_cor</span>() <span class="sc">+</span> </span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label=</span>state), <span class="at">check_overlap =</span> <span class="cn">TRUE</span>, <span class="at">vjust =</span> <span class="dv">1</span>, <span class="at">hjust =</span> <span class="dv">1</span>) <span class="sc">+</span> </span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">y=</span><span class="st">"Electric Station Density (station / sq. mi.)"</span>, </span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Population Density (population / sq. mi.)"</span> , </span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">title=</span><span class="st">"Do States with Higher Population Densities Have Higher Station Densities?"</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>      )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="alt-fuel-station_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+<p><img src="alt-fuel-station_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>We can build the linear model to make inferences about the relationship. We’ll use a log transform for both the predictor and response variables as we did above in the plot.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># build a linear regression model regressing station density onto population density</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>lm_mod <span class="ot">&lt;-</span> <span class="fu">linear_reg</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fit</span>(<span class="fu">log10</span>(station_den) <span class="sc">~</span> <span class="fu">log10</span>(pop_den), <span class="at">data=</span>station_pop_den)</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># get the 95% confidence intervals</span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>coef <span class="ot">&lt;-</span> <span class="fu">tidy</span>(lm_mod, <span class="at">conf.int =</span> <span class="cn">TRUE</span>, <span class="at">conf.level=</span><span class="fl">0.95</span>) <span class="sc">|&gt;</span> </span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">!=</span> <span class="st">"(Intercept)"</span>)</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>coef <span class="sc">|&gt;</span> </span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(estimate, conf.low, conf.high) <span class="sc">|&gt;</span> </span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cbind</span>(<span class="fu">glance</span>(lm_mod)) <span class="sc">|&gt;</span> </span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(estimate, r.squared, statistic, conf.low, conf.high, p.value) <span class="sc">|&gt;</span> </span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># build a linear regression model regressing station density onto population density</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>lm_mod <span class="ot">&lt;-</span> <span class="fu">linear_reg</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fit</span>(<span class="fu">log10</span>(station_density) <span class="sc">~</span> <span class="fu">log10</span>(pop_den), <span class="at">data=</span>pop_station_den_2020)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="co"># get the 95% confidence intervals</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>coef <span class="ot">&lt;-</span> <span class="fu">tidy</span>(lm_mod, <span class="at">conf.int =</span> <span class="cn">TRUE</span>, <span class="at">conf.level=</span><span class="fl">0.95</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">!=</span> <span class="st">"(Intercept)"</span>)</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>coef <span class="sc">|&gt;</span> </span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(estimate, conf.low, conf.high) <span class="sc">|&gt;</span> </span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">cbind</span>(<span class="fu">glance</span>(lm_mod)) <span class="sc">|&gt;</span> </span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(estimate, r.squared, statistic, conf.low, conf.high, p.value) <span class="sc">|&gt;</span> </span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <table class="table table-sm table-striped">
 <thead>
@@ -547,19 +581,39 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: right;">1.076753</td>
-<td style="text-align: right;">0.84658</td>
-<td style="text-align: right;">253.8305</td>
-<td style="text-align: right;">0.9407132</td>
-<td style="text-align: right;">1.212792</td>
+<td style="text-align: right;">1.043191</td>
+<td style="text-align: right;">0.8716973</td>
+<td style="text-align: right;">312.5271</td>
+<td style="text-align: right;">0.9244118</td>
+<td style="text-align: right;">1.161971</td>
 <td style="text-align: right;">0</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
-<p>The linear regression model shows a strong correlation of 0.92 between the population density of a state and the station density of that state. With this correlation, we have an <span class="math inline">\(R^2\)</span> showing that our model explains about 0.84658% of the variability in the data. We also obtained a p-value of 2.3879738^{-20}. This implies that under a null hypothesis that the linear model has a slope of 0, there is a near zero probability that we would find the calculated slope above from random samples of the data. This indicates that the relationship found between population density and station density is statistically significant.</p>
-<p>Because we used a logarithmic transform for both the predictor and response variables, we <strong>cannot</strong> simply infer that for each 1 unit increase in the population density, we expect to see, on average, a 1.0767528 <span class="math inline">\(\pm\)</span> 0.1360396 increase in station density. Instead, taking the logarithmic transforms into account, we can infer from this model that for every 1% increase in the population density of a state, we can expect, on average, a 1.0767528% <span class="math inline">\(\pm\)</span> 0.1360396% increase in the station density for that state (<a href="https://data.library.virginia.edu/interpreting-log-transformations-in-a-linear-model/">UVA Library StatLab</a>).</p>
+<p>The linear regression model shows a strong correlation of 0.93 between the population density of a state and the station density of that state. With this correlation, we have an <span class="math inline">\(R^2\)</span> showing that our model explains about 0.8716973% of the variability in the data. We also obtained a p-value of 3.855847^{-22}. This implies that under a null hypothesis that the linear model has a slope of 0, there is a near zero probability that we would find the calculated slope above from random samples of the data. This indicates that the relationship found between population density and station density is statistically significant.</p>
+<p>Because we used a logarithmic transform for both the predictor and response variables, we <strong>cannot</strong> simply infer that for each 1 unit increase in the population density, we expect to see, on average, a 1.0431912 <span class="math inline">\(\pm\)</span> 0.1187795 increase in station density. Instead, taking the logarithmic transforms into account, we can infer from this model that for every 1% increase in the population density of a state, we can expect, on average, a 1.0431912% <span class="math inline">\(\pm\)</span> 0.1187795% increase in the station density for that state (<a href="https://data.library.virginia.edu/interpreting-log-transformations-in-a-linear-model/">UVA Library StatLab</a>).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>pop_station_den <span class="sc">|&gt;</span> </span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">#filter(state == "Wyoming") |&gt; </span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(pop_den, station_density)) <span class="sc">+</span> </span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">show.legend =</span> <span class="cn">FALSE</span>) <span class="sc">+</span> </span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_log10</span>() <span class="sc">+</span> </span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_log10</span>() <span class="sc">+</span> </span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se=</span><span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label=</span>state), <span class="at">check_overlap =</span> <span class="cn">TRUE</span>) <span class="sc">+</span> </span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transition_time</span>(open_year) <span class="sc">+</span> </span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">title=</span><span class="st">"Population and Station Density Changes over Time"</span>, </span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle=</span><span class="st">"Year: {round(frame_time)}"</span>,</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">y=</span><span class="st">"Electric Station Density (station / sq. mi.)"</span>, </span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Population Density (population / sq. mi.)"</span> ,</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="alt-fuel-station_files/figure-html/unnamed-chunk-10-1.gif" class="img-fluid"></p>
+</div>
+</div>
 </section>
 </section>
 
