@@ -5,6 +5,8 @@ date: '2022-05-20'
 output: html_document
 ---
 
+[Code is available here](https://github.com/sdhoyt/alt-fuel-station-analysis/blob/main/alt-fuel-station.qmd)
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, error = FALSE)
 ```
